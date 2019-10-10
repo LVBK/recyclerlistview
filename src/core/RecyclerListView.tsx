@@ -42,7 +42,6 @@ import ViewRenderer from "../platform/reactnative/viewrenderer/ViewRenderer";
 import { DefaultJSItemAnimator as DefaultItemAnimator } from "../platform/reactnative/itemanimators/defaultjsanimator/DefaultJSItemAnimator";
 import { Platform } from "react-native";
 const IS_WEB = !Platform || Platform.OS === "web";
-const IS_IOS = !!Platform && Platform.OS === "ios";
 //#endif
 
 /***
@@ -156,9 +155,7 @@ export default class RecyclerListView<P extends RecyclerListViewProps, S extends
     constructor(props: P, context?: any) {
         super(props, context);
         this._virtualRenderer = new VirtualRenderer(this._renderStackWhenReady, (offset) => {
-            if(!IS_IOS) {
-                this._pendingScrollToOffset = offset;
-            }
+            this._pendingScrollToOffset = offset;
         }, (index) => {
             return this.props.dataProvider.getStableId(index);
         }, !props.disableRecycling);
@@ -193,7 +190,9 @@ export default class RecyclerListView<P extends RecyclerListViewProps, S extends
                 offset.x = 0;
             }
             setTimeout(() => {
-                this.scrollToOffset(offset.x, offset.y, false);
+                if (offset.x >= 0 && offset.y >= 0) {
+                    this.scrollToOffset(offset.x, offset.y, false);
+                }
             }, 0);
         }
         this._processOnEndReached();
