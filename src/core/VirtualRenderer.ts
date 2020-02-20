@@ -3,7 +3,7 @@ import { Dimension, BaseLayoutProvider } from "./dependencies/LayoutProvider";
 import CustomError from "./exceptions/CustomError";
 import RecyclerListViewExceptions from "./exceptions/RecyclerListViewExceptions";
 import { Point, LayoutManager } from "./layoutmanager/LayoutManager";
-import ViewabilityTracker, { TOnItemStatusChanged } from "./ViewabilityTracker";
+import ViewabilityTracker, { TOnItemStatusChanged, WindowCorrection } from "./ViewabilityTracker";
 import { ObjectUtil, Default } from "ts-object-utils";
 import TSCast from "../utils/TSCast";
 import { BaseDataProvider } from "./dependencies/DataProvider";
@@ -86,16 +86,16 @@ export default class VirtualRenderer {
         return { height: 0, width: 0 };
     }
 
-    public updateOffset(offsetX: number, offsetY: number, correction: number, isActual: boolean): void {
+    public updateOffset(offsetX: number, offsetY: number, isActual: boolean, correction: WindowCorrection): void {
         if (this._viewabilityTracker) {
             const offset = this._params && this._params.isHorizontal ? offsetX : offsetY;
             if (!this._isViewTrackerRunning) {
                 if (isActual) {
                     this._viewabilityTracker.setActualOffset(offset);
                 }
-                this.startViewabilityTracker();
+                this.startViewabilityTracker(correction);
             }
-            this._viewabilityTracker.updateOffset(offset, correction, isActual);
+            this._viewabilityTracker.updateOffset(offset, isActual, correction);
         }
     }
 
@@ -137,10 +137,11 @@ export default class VirtualRenderer {
 
     public refreshWithAnchor(): void {
         if (this._viewabilityTracker) {
-            const firstVisibleIndex = this._viewabilityTracker.findFirstLogicallyVisibleIndex();
+            let firstVisibleIndex = this._viewabilityTracker.findFirstLogicallyVisibleIndex();
             this._prepareViewabilityTracker();
             let offset = 0;
             if (this._layoutManager && this._params) {
+                firstVisibleIndex = Math.min(this._params.itemCount - 1, firstVisibleIndex);
                 const point = this._layoutManager.getOffsetForIndex(firstVisibleIndex);
                 this._scrollOnNextUpdate(point);
                 offset = this._params.isHorizontal ? point.x : point.y;
@@ -195,10 +196,10 @@ export default class VirtualRenderer {
         this._prepareViewabilityTracker();
     }
 
-    public startViewabilityTracker(): void {
+    public startViewabilityTracker(windowCorrection: WindowCorrection): void {
         if (this._viewabilityTracker) {
             this._isViewTrackerRunning = true;
-            this._viewabilityTracker.init();
+            this._viewabilityTracker.init(windowCorrection);
         }
     }
 
