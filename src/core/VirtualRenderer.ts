@@ -276,9 +276,19 @@ export default class VirtualRenderer {
         //Clean stable id to key map
         const oldActiveStableIds = Object.keys(this._stableIdToRenderKeyMap);
         const oldActiveStableIdsCount = oldActiveStableIds.length;
+        const oldStableCache: Array<{
+            stableId: any;
+            stableKey?: any;
+        }> = [];
         for (let i = 0; i < oldActiveStableIdsCount; i++) {
             const key = oldActiveStableIds[i];
             if (!activeStableIds[key]) {
+                if (shouldOptimizeForAnimations && this._isRecyclingEnabled) {
+                    oldStableCache.push({
+                        stableId: key,
+                        stableKey: this._stableIdToRenderKeyMap[key] ? Object.assign({}, this._stableIdToRenderKeyMap[key]) : undefined
+                    });
+                }
                 if (!shouldOptimizeForAnimations && this._isRecyclingEnabled) {
                     const stableIdItem = this._stableIdToRenderKeyMap[key];
                     if (stableIdItem) {
@@ -292,6 +302,29 @@ export default class VirtualRenderer {
             this._recyclePool.clearAll();
         }
         this._cachedRenderStack = Object.assign({}, this._renderStack);
+
+        if(oldStableCache.length === 1) {
+            const firstOldStableId = oldStableCache[0].stableId;
+            const firstOldStableKey = oldStableCache[0].stableKey;
+            if(firstOldStableKey && firstOldStableKey.key) {
+                const renderStackItem = this._renderStack[firstOldStableKey.key];
+                if (renderStackItem) {
+                    const index = renderStackItem.dataIndex;
+                    if (!ObjectUtil.isNullOrUndefined(index)) {
+                        if (index + 1 === maxIndex) {
+                            //Restore keymap 
+                            this._stableIdToRenderKeyMap[firstOldStableId] = Object.assign({} , firstOldStableKey)
+                            const newKey = this.syncAndGetKey(index + 1, getStableId, newRenderStack);
+                            const newStackItem = newRenderStack[newKey];
+                            if (!newStackItem) {
+                                newRenderStack[newKey] = { dataIndex: index + 1 };
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         for (const key in this._renderStack) {
             if (this._renderStack.hasOwnProperty(key)) {
                 const index = this._renderStack[key].dataIndex;
