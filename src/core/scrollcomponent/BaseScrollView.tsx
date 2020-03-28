@@ -25,7 +25,7 @@ export default abstract class BaseScrollView<
   constructor(props: P) {
     super(props);
   }
-  abstract scrollTo(scrollInput: {
+  public abstract scrollTo(scrollInput: {
     x: number;
     y: number;
     animated: boolean;
